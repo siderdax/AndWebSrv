@@ -20,6 +20,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.Menu;
+import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -91,18 +93,29 @@ public class MainActivity extends Activity {
 	}
 	
 	private boolean initWebServer() {
-        String ipAddr = getLocalIpAddress();
+        final String ipAddr = getLocalIpAddress();
         if ( ipAddr != null ) {	// 웹서버 설정
             try{
                 webServer = new SdxServer(8080, this); 
-                webServer.registerCGI("/stream/live.jpg", doCapture);
+                webServer.registerCGI("/stream/live", doCapture);
             }catch (IOException e){
                 webServer = null;
             }
         }
         if ( webServer != null) { // Show IP Addr
-            TextView txtv = (TextView)findViewById(R.id.testview);
-            txtv.setText("http://" + ipAddr  + ":8080");
+            final TextView txtv = (TextView)findViewById(R.id.testview);
+            txtv.setOnClickListener(new OnClickListener() {
+				
+				@Override
+				public void onClick(View v) {
+					// TODO Auto-generated method stub
+					if(txtv.getText().equals(""))
+						txtv.setText("http://" + ipAddr  + ":8080");
+					else
+						txtv.setText("");
+				}
+			});
+			
             NatPMPClient natQuery = new NatPMPClient();
             natQuery.start();  // Thread of Webserver start (no loop thread)
             Log.d("KYI", "Init WebServer Success.");  
@@ -119,7 +132,6 @@ public class MainActivity extends Activity {
                 NetworkInterface intf = en.nextElement();
                 for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
                     InetAddress inetAddress = enumIpAddr.nextElement();
-                    //if (!inetAddress.isLoopbackAddress() && !inetAddress.isLinkLocalAddress() && inetAddress.isSiteLocalAddress() ) {
                     if (!inetAddress.isLoopbackAddress() && InetAddressUtils.isIPv4Address(inetAddress.getHostAddress()) ) {
                         String ipAddr = inetAddress.getHostAddress();
                         return ipAddr;
@@ -127,7 +139,7 @@ public class MainActivity extends Activity {
                 }
             }
         } catch (SocketException ex) {
-            Log.d("KYI", ex.toString());
+            Log.w("KYI", ex.toString());
         }
         return null;
     }  
@@ -142,31 +154,31 @@ public class MainActivity extends Activity {
         public InputStream streaming(Properties parms) {
             // return 503 internal error
             if ( videoFrame_ == null) {
-                Log.d("KYI", "No free videoFrame found!");
+                Log.w("KYI", "No free videoFrame found!");
                 return null;
             }
 
             // compress yuv to jpeg
             int picWidth = 640; ///////////////////////////////////////
             int picHeight = 480;
-            Log.i("KYI", "doCapture, width : " + picWidth + ", height : " + picHeight);
-            
+            Log.d("KYI", "doCapture, width : " + picWidth + ", height : " + picHeight);
+
             YuvImage newImage = new YuvImage(preview_byte, ImageFormat.NV21, picWidth, picHeight, null);
             videoFrame_.reset();
             boolean ret;
             inProcessing = true;
             try{
-                ret = newImage.compressToJpeg( new Rect(0,0,picWidth,picHeight), 30, videoFrame_);
+            	ret = newImage.compressToJpeg( new Rect(0,0,picWidth,picHeight), 30, videoFrame_);
             } catch (Exception ex) {
-                ret = false;    
+            	ret = false;    
             } 
             inProcessing = false;
 
             // compress success, return ok
             if ( ret == true)  {
-                parms.setProperty("mime", "image/jpeg");
-                InputStream ins = videoFrame_.getInputStream();
-                return ins;
+            	parms.setProperty("mime", "image/mjpeg");
+            	InputStream ins = videoFrame_.getInputStream();
+            	return ins;
             }
             // send 503 error
             videoFrame_.release();

@@ -25,6 +25,7 @@ import java.util.Vector;
 
 import android.annotation.SuppressLint;
 import android.content.res.AssetManager;
+import android.util.Log;
 
 /**
  * A simple, tiny, nicely embeddable HTTP 1.0 (partially 1.1) server in Java
@@ -90,27 +91,27 @@ public class NanoHTTPD
 
 	public Response serve( String uri, String method, Properties header, Properties parms, Properties files )
 	{
-		System.out.println( method + " '" + uri + "' " );
+		Log.d("KYI_httpd", method + " '" + uri + "' ");
 
 		Enumeration<?> e = header.propertyNames();
 		while ( e.hasMoreElements())
 		{
 			String value = (String)e.nextElement();
-			System.out.println( "  HDR: '" + value + "' = '" +
-					header.getProperty( value ) + "'" );
+			Log.d("KYI_httpd", "  HDR: '" + value + "' = '" +
+					header.getProperty( value ) + "'");
 		}
 		e = parms.propertyNames();
 		while ( e.hasMoreElements())
 		{
 			String value = (String)e.nextElement();
-			System.out.println( "  PRM: '" + value + "' = '" +
+			Log.d("KYI_httpd", "  PRM: '" + value + "' = '" +
 					parms.getProperty( value ) + "'" );
 		}
 		e = files.propertyNames();
 		while ( e.hasMoreElements())
 		{
 			String value = (String)e.nextElement();
-			System.out.println( "  UPLOADED: '" + value + "' = '" +
+			Log.d("KYI_httpd", "  UPLOADED: '" + value + "' = '" +
 					files.getProperty( value ) + "'" );
 		}
 
@@ -758,16 +759,28 @@ public class NanoHTTPD
 			{
 				if ( status == null )
 					throw new Error( "sendResponse(): Status can't be null." );
-
+				String pw_str;
 				OutputStream out = mySocket.getOutputStream();
 				PrintWriter pw = new PrintWriter( out );
-				pw.print("HTTP/1.0 " + status + " \r\n");
-
-				if ( mime != null )
-					pw.print("Content-Type: " + mime + "\r\n");
+				
+				pw_str = "HTTP/1.0 " + status + " \r\n";
+				
+				if ( mime != null ){
+					Log.d("KYI", "Mime Checking : " + mime);
+					if(mime.equals("mjpegStart")){
+						pw_str += "Content-Type: multipart/x-mixed-replace; boundary=--myboundary\r\n\r\n";
+					}
+					
+					if(mime.equals("image/mjpeg") || mime.equals("mjpegStart")){
+						pw_str += "--myboundary\r\n";
+						pw_str += "Content-Type: " + "image/jpeg" + "\r\n";
+					}
+					else
+						pw_str += "Content-Type: " + mime + "\r\n";
+				}
 
 				if ( header == null || header.getProperty( "Date" ) == null )
-					pw.print( "Date: " + gmtFrmt.format( new Date()) + "\r\n");
+					pw_str += "Date: " + gmtFrmt.format( new Date()) + "\r\n";
 
 				if ( header != null )
 				{
@@ -776,41 +789,33 @@ public class NanoHTTPD
 					{
 						String key = (String)e.nextElement();
 						String value = header.getProperty( key );
-						pw.print( key + ": " + value + "\r\n");
+						pw_str += key + ": " + value + "\r\n";
 					}
 				}
-
-				pw.print("\r\n");
+				
+				pw.print(pw_str + "\r\n");
+				
+				// ori
 				pw.flush();
+				
+				Log.i("KYI_httpd", pw_str);
 
-				///////////////////////// Data part /////////////////////////////
+				///////////////////////// Data part //////////////////////////
 				if ( data != null )
 				{
-					//if ( isStreaming == false) {
-						int pending = data.available();	// This is to support partial sends, see serveFile()
-						byte[] buff = new byte[2048];
-						while (pending>0)
-						{
-							int read = data.read( buff, 0, ( (pending>2048) ?  2048 : pending ));
-							if (read <= 0)	break;
-							out.write( buff, 0, read );
-							pending -= read;
-						}
-					/*} else {
-						byte[] buff = new byte[2048];
-						while (true)
-						{
-							int read = data.read( buff, 0, 2048);
-							if (read <= 0) break;
-							out.write( buff, 0, read );
-						}
-					}*/
+					int pending = data.available();	// This is to support partial sends, see serveFile()
+					byte[] buff = new byte[2048];
+					while (pending>0)
+					{
+						int read = data.read( buff, 0, ( (pending>2048) ?  2048 : pending ));
+						if (read <= 0)	break;
+						out.write( buff, 0, read );
+						pending -= read;
+					}
 				}
 				//////////////////////////////////////////////////////////////
 				out.flush();
 				out.close();
-				/*if ( data != null )
-					data.close();*/
 			}
 			catch( IOException ioe )
 			{

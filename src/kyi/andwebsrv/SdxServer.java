@@ -79,7 +79,10 @@ public class SdxServer extends NanoHTTPD
         public String run(Properties parms); 
         public InputStream streaming(Properties parms);
     }
-    private HashMap<String, CommonGatewayInterface> cgiEntries = new HashMap<String, CommonGatewayInterface>();
+    
+    private HashMap<String, CommonGatewayInterface> cgiEntries = 
+    		new HashMap<String, CommonGatewayInterface>();
+    
     public void registerCGI(String uri, CommonGatewayInterface cgi) {
         if ( cgi != null)
 			cgiEntries.put(uri, cgi);
