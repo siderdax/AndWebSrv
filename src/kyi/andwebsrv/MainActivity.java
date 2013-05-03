@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.Menu;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
@@ -67,7 +68,7 @@ public class MainActivity extends Activity {
 	}
 
 	private void initCam(){
-		mcam = Camera.open();
+		mcam = Camera.open(1);
 		
 		// Setup parameter to get jpeg
 		PreviewCallback preview_cb = new PreviewCallback(){
@@ -94,18 +95,17 @@ public class MainActivity extends Activity {
         if ( ipAddr != null ) {	// 웹서버 설정
             try{
                 webServer = new SdxServer(8080, this); 
-                /*webServer.registerCGI("/cgi/query", doQuery);
-                webServer.registerCGI("/cgi/setup", doSetup);*/
                 webServer.registerCGI("/stream/live.jpg", doCapture);
             }catch (IOException e){
                 webServer = null;
             }
         }
         if ( webServer != null) { // Show IP Addr
-            Toast.makeText(this, "http://" + ipAddr  + ":8080", Toast.LENGTH_SHORT).show();
+            TextView txtv = (TextView)findViewById(R.id.testview);
+            txtv.setText("http://" + ipAddr  + ":8080");
             NatPMPClient natQuery = new NatPMPClient();
             natQuery.start();  // Thread of Webserver start (no loop thread)
-            Log.i("KYI", "Init WebServer Success.");  
+            Log.d("KYI", "Init WebServer Success.");  
             return true;
         } else {
             Log.e("KYI", "Webserver connection Error");
@@ -131,44 +131,6 @@ public class MainActivity extends Activity {
         }
         return null;
     }  
-	
-	/*private TeaServer.CommonGatewayInterface doQuery = new TeaServer.CommonGatewayInterface () {
-        @Override
-        public String run(Properties parms) {
-            String ret = "";
-            List<Camera.Size> supportSize =  cameraView_.getSupportedPreviewSize();                             
-            ret = ret + "" + cameraView_.Width() + "x" + cameraView_.Height() + "|";
-            for(int i = 0; i < supportSize.size() - 1; i++) {
-                ret = ret + "" + supportSize.get(i).width + "x" + supportSize.get(i).height + "|";
-            }
-            int i = supportSize.size() - 1;
-            ret = ret + "" + supportSize.get(i).width + "x" + supportSize.get(i).height ;
-            return ret;
-        }
-        
-        @Override 
-        public InputStream streaming(Properties parms) {
-            return null;
-        }    
-    }; 
-
-    private TeaServer.CommonGatewayInterface doSetup = new TeaServer.CommonGatewayInterface () {
-        @Override
-        public String run(Properties parms) {
-            int wid = Integer.parseInt(parms.getProperty("wid")); 
-            int hei = Integer.parseInt(parms.getProperty("hei"));
-            Log.d("TEAONLY", ">>>>>>>run in doSetup wid = " + wid + " hei=" + hei);
-            cameraView_.StopPreview();
-            cameraView_.setupCamera(wid, hei, previewCb_);
-            cameraView_.StartPreview();
-            return "OK";
-        }   
- 
-        @Override 
-        public InputStream streaming(Properties parms) {
-            return null;
-        }    
-    }; */
 
     private SdxServer.CommonGatewayInterface doCapture = new SdxServer.CommonGatewayInterface () {
     	@Override
